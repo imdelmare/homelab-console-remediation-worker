@@ -1,0 +1,10 @@
+# HTTPS is required except for a loopback development endpoint.
+mcp_url = "https://console.example.invalid/mcp"
+token_file = "/etc/homelab-console-remediation-worker/token"
+project_dir = "/opt/homelab-console-remediation-project"
+runtime_dir = "/var/lib/homelab-console-remediation-worker/runtime"
+opencode_config = "/etc/homelab-console-remediation-worker/opencode.json"
+poll_max_seconds = 30
+engine_timeout_seconds = 900
+shutdown_grace_seconds = 15
+lease_safety_seconds = 5

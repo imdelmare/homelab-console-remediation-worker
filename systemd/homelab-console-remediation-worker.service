@@ -1,0 +1,30 @@
+[Unit]
+Description=Homelab Console remediation worker
+After=network-online.target
+
+[Service]
+Type=simple
+User=homelab-console
+Group=homelab-console
+ExecStart=/opt/homelab-console-remediation-worker/.venv/bin/python -m remediation_worker run --config /etc/homelab-console-remediation-worker/config.toml
+Restart=on-failure
+RestartSec=10
+Environment=HOME=/var/lib/homelab-console-remediation-worker
+Environment=XDG_CACHE_HOME=/var/lib/homelab-console-remediation-worker/cache
+Environment=XDG_CONFIG_HOME=/var/lib/homelab-console-remediation-worker/config
+Environment=XDG_DATA_HOME=/var/lib/homelab-console-remediation-worker/data
+Environment=XDG_STATE_HOME=/var/lib/homelab-console-remediation-worker/state
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+StateDirectory=homelab-console-remediation-worker
+StateDirectoryMode=0700
+
+[Install]
+WantedBy=multi-user.target
