@@ -2,13 +2,13 @@
 
 | Core migration | Contract | Adapter | Evidence | Status |
 | --- | --- | --- | --- | --- |
-| 0021 durable worker jobs | v1 | 0.1.0 | pull, renew, finish, UUID idempotency tests | covered |
-| 0022 approval worker binding | v1 | 0.1.0 | `LeasedGatewayProxy` injects task/job/token for approval and task-bound calls | covered in proxy |
-| streamable HTTP MCP | v1 | 0.1.0 | official MCP client implementation, no live test | pending integration |
+| 0021 durable worker jobs | v1 | 0.2.0 | pull, renew, finish, UUID idempotency tests | covered |
+| 0022 approval worker binding | v1 | 0.2.0 | `LeasedGatewayProxy` injects task/job/token for approval and task-bound calls | covered in proxy |
+| streamable HTTP MCP | v1 | 0.2.0 | official MCP client implementation, no live test | pending integration |
 | mandatory OpenCode fenced bridge | v1 | 0.2.0 | explicit 123-tool infrastructure allowlist, deny-new-tool test, schema scrubbing, scope rejection and lease injection tests | covered locally; pending live MCP drill |
 | closed engine profile | v1 | 0.2.0 | engine profile with isolated HOME/XDG confirms built-ins disabled and exactly one MCP bridge | verified locally |
 | rootless container profile | v1 | 0.2.0 | pinned OpenCode, non-root UID, read-only rootfs, dropped capabilities, no ports/socket and ephemeral lease tmpfs | covered statically; pending image build and live drill |
-| multi-engine selection | v1 | 0.2.0 | `ENGINE` env var, `create_engine()` factory, per-engine `profiles/*.json`, `config.py` validation, Codex placeholder, dedicated `docs/ENGINES.md` | covered statically; build and runtime verified |
+| multi-engine selection | v1 | 0.2.0 | `ENGINE` env var, `create_engine()` factory, per-engine `profiles/*.json`, `config.py` validation, Codex, Claude and Cline engines implemented and registry-validated, dedicated `docs/ENGINES.md` | covered statically; all four engines built and verified inside container |
 
 The contract's core-side grant/revoke, concurrent acquisition, token hashing, and provider approval enforcement are owned and tested by core; this repository does not duplicate them.
 

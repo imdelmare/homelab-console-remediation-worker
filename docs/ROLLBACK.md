@@ -13,3 +13,7 @@
    `latest` for a live drill.
 
 Do not start the legacy and external workers concurrently for the same task boundary.
+
+6. To verify rollback, check the console task list and confirm no active leases.
+   The worker container logs must show no successful `tasks_worker_next` calls
+   after the capability was revoked.

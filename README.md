@@ -1,6 +1,6 @@
 # Homelab Console Remediation Worker
 
-External, lease-fenced worker for `REMEDIATION_WORKER_V1`. It polls only the dedicated Homelab Console MCP registration and launches a closed OpenCode argv profile.
+External, lease-fenced worker for `REMEDIATION_WORKER_V1`. It polls a dedicated Homelab Console MCP registration and launches a closed engine profile (OpenCode, Codex, Claude or Cline).
 
 The engine agent receives MCP access only through the mandatory stdio bridge. The fixed profile in `profiles/` starts `python -m remediation_worker bridge --config /etc/homelab-console-remediation-worker/config.toml`; it accepts no task, model, URL or command parameters. The bridge reads the runner-owned 0600 lease-context file, filters worker-control tools and injects the active task and lease through `LeasedGatewayProxy`.
 
@@ -8,7 +8,7 @@ Use `python -m remediation_worker config-check --config config.toml` before inst
 
 ## Engines
 
-The worker is engine-neutral. `ENGINE=opencode` (default) uses OpenCode 1.18.8 with a fenced profile. `ENGINE=codex` is reserved for a future Codex adapter. The MCP bridge, lease lifecycle and gateway proxy stay identical. See [`docs/ENGINES.md`](docs/ENGINES.md) for the architecture and how to add an engine.
+The worker is engine-neutral. `ENGINE=opencode` (default) uses OpenCode 1.18.8 with a fenced profile. `ENGINE=codex`, `ENGINE=claude` and `ENGINE=cline` use Codex, Claude Code and Cline respectively. The MCP bridge, lease lifecycle and gateway proxy stay identical. See [`docs/ENGINES.md`](docs/ENGINES.md) for the architecture and how to add an engine.
 
 The recommended evaluation path is the rootless container profile in
 `compose.yaml`. It has a read-only root filesystem, drops all Linux
