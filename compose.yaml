@@ -23,6 +23,7 @@ services:
       XDG_CONFIG_HOME: /var/lib/homelab-console-remediation-worker/config
       XDG_DATA_HOME: /var/lib/homelab-console-remediation-worker/data
       XDG_STATE_HOME: /var/lib/homelab-console-remediation-worker/state
+      ENGINE: ${ENGINE:-opencode}
     volumes:
       - ./config.toml:/etc/homelab-console-remediation-worker/config.toml:ro
       - ./secrets/mcp-token:/run/secrets/mcp-token:ro

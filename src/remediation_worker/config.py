@@ -13,7 +13,9 @@ class Settings(BaseModel):
     token_file: Path
     project_dir: Path
     runtime_dir: Path = Path("/var/lib/homelab-console-remediation-worker/runtime")
-    opencode_config: Path = Path("/etc/homelab-console-remediation-worker/opencode.json")
+    opencode_config: Path = Path("/etc/homelab-console-remediation-worker/profiles/opencode.json")
+    engine: str = "opencode"
+    profile_dir: Path = Path("/etc/homelab-console-remediation-worker/profiles")
     poll_max_seconds: int = Field(default=30, ge=1, le=300)
     engine_timeout_seconds: int = Field(default=900, ge=1, le=3600)
     shutdown_grace_seconds: int = Field(default=15, ge=1, le=120)
@@ -50,6 +52,13 @@ class Settings(BaseModel):
     def absolute_paths(cls, value: Path) -> Path:
         if not value.is_absolute():
             raise ValueError("paths must be absolute")
+        return value
+
+    @field_validator("engine")
+    @classmethod
+    def known_engine(cls, value: str) -> str:
+        if value not in {"opencode", "codex"}:
+            raise ValueError(f"unknown engine: {value!r}")
         return value
 
     def validate_paths(self) -> None:

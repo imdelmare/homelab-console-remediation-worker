@@ -2,6 +2,8 @@
 
 External, lease-fenced worker for `REMEDIATION_WORKER_V1`. It polls only the dedicated Homelab Console MCP registration and launches a closed OpenCode argv profile.
 
+The default engine is OpenCode 1.18.8. Select an engine via the `ENGINE` env var (currently `opencode` or `codex`). The fenced bridge and lease contract remain identical regardless of the underlying model runtime.
+
 OpenCode receives MCP access only through the mandatory stdio bridge. The fixed OpenCode profile in `docs/opencode.json` starts `python -m remediation_worker bridge --config /etc/homelab-console-remediation-worker/config.toml`; it accepts no task, model, URL or command parameters. The bridge reads the runner-owned 0600 lease-context file, filters worker-control tools and injects the active task and lease through `LeasedGatewayProxy`.
 
 Use `python -m remediation_worker config-check --config config.toml` before installation. See `docs/INSTALLATION.md`, `docs/RUNBOOK.md`, and `docs/ROLLBACK.md`.

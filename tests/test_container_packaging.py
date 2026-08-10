@@ -25,9 +25,20 @@ def test_compose_is_read_only_and_exposes_no_ports_or_docker_socket():
 
 
 def test_container_profile_uses_only_the_fenced_bridge():
-    profile = json.loads((ROOT / "opencode.container.json").read_text(encoding="utf-8"))
+    profile = json.loads((ROOT / "profiles/opencode.json").read_text(encoding="utf-8"))
     assert profile["tools"] == {"*": False}
     assert list(profile["mcp"]) == ["homelab-remediation"]
+def test_codex_profile_exists_and_has_same_structure():
+    profile = json.loads((ROOT / "profiles/codex.json").read_text(encoding="utf-8"))
+    assert profile["tools"] == {"*": False}
+    assert list(profile["mcp"]) == ["homelab-remediation"]
+    assert "homelab-remediator" in profile.get("agent", {})
+    assert "Codex engine" in profile["agent"]["homelab-remediator"]["description"]
+
+def test_engine_env_default_is_opencode():
+    compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
+    assert "ENGINE: ${ENGINE:-opencode}" in compose
+
     command = profile["mcp"]["homelab-remediation"]["command"]
     assert command == [
         "/usr/local/bin/python",

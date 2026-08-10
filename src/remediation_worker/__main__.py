@@ -7,7 +7,7 @@ from pathlib import Path
 
 from .config import load_settings
 from .bridge import serve
-from .engines import OpenCodeEngine
+from .engines import create_engine
 from .gateway import McpHttpGateway
 from .runner import Runner
 
@@ -28,7 +28,12 @@ def main() -> None:
         return
     token = settings.read_token()
     gateway = McpHttpGateway(settings.mcp_url, token)
-    engine = OpenCodeEngine(settings.project_dir, "Execute only the assigned remediation task through the fenced MCP bridge.", settings.engine_timeout_seconds, settings.opencode_config)
+    engine = create_engine(
+        engine=settings.engine,
+        project_dir=settings.project_dir,
+        timeout_seconds=settings.engine_timeout_seconds,
+        profile_config=settings.opencode_config,
+    )
     runner = Runner(
         gateway,
         engine,

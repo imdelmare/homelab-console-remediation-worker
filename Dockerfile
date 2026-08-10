@@ -14,9 +14,9 @@ RUN python -m pip install .
 
 RUN useradd --uid 10001 --create-home --home-dir /var/lib/homelab-console-remediation-worker         --shell /usr/sbin/nologin worker     && install -d -o worker -g worker -m 0700         /run/homelab-console-remediation-worker         /var/lib/homelab-console-remediation-worker/cache         /var/lib/homelab-console-remediation-worker/config         /var/lib/homelab-console-remediation-worker/data/opencode         /var/lib/homelab-console-remediation-worker/state         /workspace     && install -d -o root -g root -m 0755 /etc/homelab-console-remediation-worker
 
-COPY --chown=root:root opencode.container.json /etc/homelab-console-remediation-worker/opencode.json
+COPY --chown=root:root profiles/ /etc/homelab-console-remediation-worker/profiles/
 COPY --chown=root:root AGENTS.md /workspace/AGENTS.md
-RUN chmod 0444 /etc/homelab-console-remediation-worker/opencode.json /workspace/AGENTS.md
+RUN chmod 0444 /etc/homelab-console-remediation-worker/profiles/*.json /workspace/AGENTS.md
 
 USER 10001:10001
 

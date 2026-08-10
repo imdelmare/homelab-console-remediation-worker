@@ -22,10 +22,13 @@ drops all capabilities and does not mount a Docker socket.
    docker compose run --rm --entrypoint opencode worker --version
    ```
 
-5. Before granting `task-worker.v1`, inspect the resolved OpenCode profile in an
+5. Profiles live in `profiles/`: one JSON file per engine. The `ENGINE` env var
+   selects which profile is loaded. `opencode` is the default. Switch engines
+   by setting `ENGINE=codex` in the Compose environment.
+6. Before granting `task-worker.v1`, inspect the resolved OpenCode profile in an
    isolated one-off container and confirm that built-ins are disabled and the
    only MCP server is `homelab-remediation`.
-6. Start with `docker compose up -d`, then inspect container health. Do not
+7. Start with `docker compose up -d`, then inspect container health. Do not
    assign a live task until the operator has completed the capability grant and
    drill plan.
 
