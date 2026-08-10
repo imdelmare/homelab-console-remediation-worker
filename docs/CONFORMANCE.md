@@ -7,6 +7,7 @@
 | streamable HTTP MCP | v1 | 0.1.0 | official MCP client implementation, no live test | pending integration |
 | mandatory OpenCode fenced bridge | v1 | 0.1.0 | explicit 123-tool infrastructure allowlist, deny-new-tool test, schema scrubbing, scope rejection and lease injection tests | covered locally; pending live MCP drill |
 | closed OpenCode profile | v1 | 0.1.0 | `opencode 1.18.8 debug config` with isolated HOME/XDG confirms built-ins disabled and exactly one MCP bridge | verified locally |
+| rootless container profile | v1 | 0.1.0 | pinned OpenCode, non-root UID, read-only rootfs, dropped capabilities, no ports/socket and ephemeral lease tmpfs | covered statically; pending image build and live drill |
 
 The contract's core-side grant/revoke, concurrent acquisition, token hashing, and provider approval enforcement are owned and tested by core; this repository does not duplicate them.
 
