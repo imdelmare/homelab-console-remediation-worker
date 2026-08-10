@@ -57,7 +57,7 @@ _ENGINES = {
 
 One JSON file per engine in `profiles/`. The Dockerfile copies the entire
 directory into the container's `/etc/homelab-console-remediation-worker/profiles/`.
-The `config.toml` field `profile_config` points to the active profile path
+The `config.toml` field `opencode_config` points to the active profile path
 (kept for backward compatibility — always set it to the engine's profile, e.g.
 `profiles/opencode.json` or `profiles/codex.json`).
 

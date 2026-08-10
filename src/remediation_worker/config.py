@@ -57,7 +57,7 @@ class Settings(BaseModel):
     @field_validator("engine")
     @classmethod
     def known_engine(cls, value: str) -> str:
-        if value not in {"opencode", "codex"}:
+        if value not in {"opencode", "codex", "claude", "cline"}:
             raise ValueError(f"unknown engine: {value!r}")
         return value
 

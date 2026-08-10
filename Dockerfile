@@ -6,6 +6,10 @@ ENV PYTHONDONTWRITEBYTECODE=1     PYTHONUNBUFFERED=1     PIP_NO_CACHE_DIR=1     
 
 RUN apt-get update     && apt-get install --yes --no-install-recommends ca-certificates nodejs npm tini     && npm install --global "opencode-ai@${OPENCODE_VERSION}"     && test "$(opencode --version)" = "${OPENCODE_VERSION}"     && rm -rf /var/lib/apt/lists/* /root/.npm
 
+# Additional engines — uncomment to include:
+# RUN npm install --global "@anthropic-ai/claude-code" \
+#     && npm install --global "cline"
+
 WORKDIR /opt/homelab-console-remediation-worker
 
 COPY pyproject.toml README.md ./

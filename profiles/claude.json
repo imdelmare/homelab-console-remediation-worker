@@ -1,0 +1,41 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "share": "disabled",
+  "autoupdate": false,
+  "snapshot": false,
+  "formatter": false,
+  "lsp": false,
+  "tools": {
+    "*": false
+  },
+  "agent": {
+    "homelab-remediator": {
+      "description": "Lease-fenced Homelab Console remediation worker (Claude Code engine)",
+      "tools": {
+        "homelab-remediation_*": true
+      },
+      "permission": {
+        "*": "deny",
+        "homelab-remediation_*": "allow"
+      }
+    }
+  },
+  "mcp": {
+    "homelab-remediation": {
+      "type": "local",
+      "command": [
+        "/usr/local/bin/python",
+        "-m",
+        "remediation_worker",
+        "bridge",
+        "--config",
+        "/etc/homelab-console-remediation-worker/config.toml"
+      ],
+      "environment": {
+        "HOMELAB_WORKER_LEASE_FILE": "{env:HOMELAB_WORKER_LEASE_FILE}"
+      },
+      "enabled": true,
+      "timeout": 30000
+    }
+  }
+}

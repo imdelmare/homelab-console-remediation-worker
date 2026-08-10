@@ -6,14 +6,19 @@ from typing import Any
 from remediation_worker.protocol import Engine, Job
 
 from .opencode import OpenCodeEngine
+from .codex import CodexEngine
+from .claude import ClaudeEngine
+from .cline import ClineEngine
 
 
-__all__ = ["OpenCodeEngine", "create_engine"]
+__all__ = ["OpenCodeEngine", "CodexEngine", "ClaudeEngine", "ClineEngine", "create_engine"]
 
 
 _ENGINES: dict[str, type[Any]] = {
     "opencode": OpenCodeEngine,
-    # "codex": CodexEngine,  # future
+    "codex": CodexEngine,
+    "claude": ClaudeEngine,
+    "cline": ClineEngine,
 }
 
 
@@ -26,7 +31,7 @@ def create_engine(
 ) -> Engine:
     """Resolve a named engine and return a configured instance.
 
-    Names are lowercase versioned labels, e.g. ``opencode`` or ``codex``.
+    Supported engines: opencode, codex, claude, cline.
     Unknown names raise :class:`ValueError`. Keyword arguments are forwarded
     to the concrete engine constructor — the factory never inspects them.
     """

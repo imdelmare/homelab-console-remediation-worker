@@ -28,6 +28,9 @@ services:
       - ./config.toml:/etc/homelab-console-remediation-worker/config.toml:ro
       - ./secrets/mcp-token:/run/secrets/mcp-token:ro
       - ./secrets/auth.json:/var/lib/homelab-console-remediation-worker/data/auth.json:ro
+      # Engine-specific API keys (mount only the ones you need)
+      # - ${OPENAI_API_KEY_FILE:-./secrets/openai-api-key}:/run/secrets/openai-api-key:ro
+      # - ${ANTHROPIC_API_KEY_FILE:-./secrets/anthropic-api-key}:/run/secrets/anthropic-api-key:ro
     tmpfs:
       - /run/homelab-console-remediation-worker:rw,noexec,nosuid,nodev,mode=0700,uid=10001,gid=10001
       - /tmp:rw,noexec,nosuid,nodev,mode=1777
