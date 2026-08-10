@@ -13,7 +13,7 @@ class Settings(BaseModel):
     token_file: Path
     project_dir: Path
     runtime_dir: Path = Path("/var/lib/homelab-console-remediation-worker/runtime")
-    opencode_config: Path = Path("/etc/homelab-console-remediation-worker/profiles/opencode.json")
+    profile_config: Path = Path("/etc/homelab-console-remediation-worker/profiles/opencode.json")
     engine: str = "opencode"
     profile_dir: Path = Path("/etc/homelab-console-remediation-worker/profiles")
     poll_max_seconds: int = Field(default=30, ge=1, le=300)
@@ -47,7 +47,7 @@ class Settings(BaseModel):
             raise ValueError("token_file is empty")
         return token
 
-    @field_validator("project_dir", "runtime_dir", "opencode_config")
+    @field_validator("project_dir", "runtime_dir")
     @classmethod
     def absolute_paths(cls, value: Path) -> Path:
         if not value.is_absolute():
@@ -61,6 +61,14 @@ class Settings(BaseModel):
             raise ValueError(f"unknown engine: {value!r}")
         return value
 
+    @field_validator("profile_config")
+    @classmethod
+    def profile_readonly(cls, value: Path) -> Path:
+        info = value.lstat()
+        if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode) or info.st_mode & 0o022:
+            raise ValueError("profile_config must be a non-writable regular file")
+        return value
+
     def validate_paths(self) -> None:
         info = self.project_dir.lstat()
         if stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode):
@@ -69,9 +77,6 @@ class Settings(BaseModel):
         info = self.runtime_dir.lstat()
         if stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode) or info.st_mode & 0o077:
             raise ValueError("runtime_dir must be a non-symlink directory mode 0700")
-        info = self.opencode_config.lstat()
-        if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode) or info.st_mode & 0o022:
-            raise ValueError("opencode_config must be a non-writable regular file")
 
 
 def load_settings(path: Path) -> Settings:

@@ -32,7 +32,7 @@ def main() -> None:
         engine=settings.engine,
         project_dir=settings.project_dir,
         timeout_seconds=settings.engine_timeout_seconds,
-        profile_config=settings.opencode_config,
+        profile_config=settings.profile_config,
     )
     runner = Runner(
         gateway,

@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_container_runs_unprivileged_with_pinned_opencode():
+def test_container_runs_unprivileged():
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
     assert "ARG OPENCODE_VERSION=1.18.8" in dockerfile
     assert 'npm install --global "opencode-ai@${OPENCODE_VERSION}"' in dockerfile
@@ -35,7 +35,7 @@ def test_codex_profile_exists_and_has_same_structure():
     assert "homelab-remediator" in profile.get("agent", {})
     assert "Codex engine" in profile["agent"]["homelab-remediator"]["description"]
 
-def test_engine_env_default_is_opencode():
+def test_engine_env_default():
     compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
     assert "ENGINE: ${ENGINE:-opencode}" in compose
 
@@ -48,3 +48,9 @@ def test_engine_env_default_is_opencode():
         "--config",
         "/etc/homelab-console-remediation-worker/config.toml",
     ]
+
+
+def test_auth_mount_is_engine_neutral():
+    compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
+    assert "opencode-auth.json" not in compose
+    assert "auth.json" in compose

@@ -27,7 +27,7 @@ services:
     volumes:
       - ./config.toml:/etc/homelab-console-remediation-worker/config.toml:ro
       - ./secrets/mcp-token:/run/secrets/mcp-token:ro
-      - ./secrets/opencode-auth.json:/var/lib/homelab-console-remediation-worker/data/opencode/auth.json:ro
+      - ./secrets/auth.json:/var/lib/homelab-console-remediation-worker/data/auth.json:ro
     tmpfs:
       - /run/homelab-console-remediation-worker:rw,noexec,nosuid,nodev,mode=0700,uid=10001,gid=10001
       - /tmp:rw,noexec,nosuid,nodev,mode=1777
