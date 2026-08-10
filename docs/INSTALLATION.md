@@ -22,9 +22,7 @@ drops all capabilities and does not mount a Docker socket.
    docker compose run --rm --entrypoint opencode worker --version
    ```
 
-5. Profiles live in `profiles/`: one JSON file per engine. The `ENGINE` env var
-   selects which profile is loaded. `opencode` is the default. Switch engines
-   by setting `ENGINE=codex` in the Compose environment.
+5. See [`docs/ENGINES.md`](ENGINES.md) for engine architecture, selection and how to add a new engine.
 6. Before granting `task-worker.v1`, inspect the resolved OpenCode profile in an
    isolated one-off container and confirm that built-ins are disabled and the
    only MCP server is `homelab-remediation`.

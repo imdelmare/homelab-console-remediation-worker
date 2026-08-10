@@ -8,7 +8,7 @@
 | mandatory OpenCode fenced bridge | v1 | 0.2.0 | explicit 123-tool infrastructure allowlist, deny-new-tool test, schema scrubbing, scope rejection and lease injection tests | covered locally; pending live MCP drill |
 | closed OpenCode profile | v1 | 0.2.0 | `opencode 1.18.8 debug config` with isolated HOME/XDG confirms built-ins disabled and exactly one MCP bridge | verified locally |
 | rootless container profile | v1 | 0.2.0 | pinned OpenCode, non-root UID, read-only rootfs, dropped capabilities, no ports/socket and ephemeral lease tmpfs | covered statically; pending image build and live drill |
-| multi-engine selection | v1 | 0.2.0 | `ENGINE` env var, factory discovery, per-engine profiles, Codex placeholder | covered statically |
+| multi-engine selection | v1 | 0.2.0 | `ENGINE` env var, `create_engine()` factory, per-engine `profiles/*.json`, `config.py` validation, Codex placeholder, dedicated `docs/ENGINES.md` | covered statically; build and runtime verified |
 
 The contract's core-side grant/revoke, concurrent acquisition, token hashing, and provider approval enforcement are owned and tested by core; this repository does not duplicate them.
 
