@@ -1,0 +1,10 @@
+# HTTPS is required except for a loopback development endpoint.
+mcp_url = "https://mcp.example.invalid/mcp/"
+token_file = "/run/secrets/mcp-token"
+project_dir = "/workspace"
+runtime_dir = "/run/homelab-console-remediation-worker"
+opencode_config = "/etc/homelab-console-remediation-worker/opencode.json"
+poll_max_seconds = 30
+engine_timeout_seconds = 900
+shutdown_grace_seconds = 15
+lease_safety_seconds = 5
