@@ -5,12 +5,28 @@ from pathlib import Path
 
 import pytest
 
-from remediation_worker.bridge import Bridge, read_context
+from remediation_worker.bridge import BRIDGE_INSTRUCTIONS, Bridge, read_context, serve
 from remediation_worker.gateway import GatewayError
 from remediation_worker.protocol import Job
 
 
 JOB = Job("job", "task", 1, "secret", "", 1)
+
+
+@pytest.mark.asyncio
+async def test_serve_imports_the_pinned_mcp_server_api(tmp_path: Path):
+    with pytest.raises(FileNotFoundError):
+        await serve(tmp_path / "missing.toml")
+
+
+def test_bridge_instructions_require_canonical_completion():
+    assert "tasks_get" in BRIDGE_INSTRUCTIONS[:512]
+    assert "tasks_context" in BRIDGE_INSTRUCTIONS[:512]
+    assert "tasks_set_status" in BRIDGE_INSTRUCTIONS
+    assert "investigating" in BRIDGE_INSTRUCTIONS
+    assert "never add task_id" in BRIDGE_INSTRUCTIONS
+    assert "tasks_update_summary" in BRIDGE_INSTRUCTIONS
+    assert "tasks_complete" in BRIDGE_INSTRUCTIONS
 
 
 class Tool:

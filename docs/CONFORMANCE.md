@@ -2,15 +2,21 @@
 
 | Core migration | Contract | Adapter | Evidence | Status |
 | --- | --- | --- | --- | --- |
-| 0021 durable worker jobs | v1 | 0.1.0 | pull, renew, finish, UUID idempotency tests | covered |
-| 0022 approval worker binding | v1 | 0.1.0 | `LeasedGatewayProxy` injects task/job/token for approval and task-bound calls | covered in proxy |
-| streamable HTTP MCP | v1 | 0.1.0 | official MCP client implementation, no live test | pending integration |
-| mandatory OpenCode fenced bridge | v1 | 0.1.0 | explicit 123-tool infrastructure allowlist, deny-new-tool test, schema scrubbing, scope rejection and lease injection tests | covered locally; pending live MCP drill |
-| closed OpenCode profile | v1 | 0.1.0 | `opencode 1.18.8 debug config` with isolated HOME/XDG confirms built-ins disabled and exactly one MCP bridge | verified locally |
-| rootless container profile | v1 | 0.1.0 | pinned OpenCode, non-root UID, read-only rootfs, dropped capabilities, no ports/socket and ephemeral lease tmpfs | covered statically; pending image build and live drill |
+| 0021 durable worker jobs | v1 | 0.2.0 | pull, renew, finish, UUID idempotency tests | covered |
+| 0022 approval worker binding | v1 | 0.2.0 | `LeasedGatewayProxy` injects task/job/token for approval and task-bound calls | covered in proxy |
+| streamable HTTP MCP | v1 | 0.2.0 | official MCP client implementation and task-bound live drill | verified live |
+| mandatory OpenCode fenced bridge | v1 | 0.2.0 | explicit 123-tool infrastructure allowlist, deny-new-tool test, schema scrubbing, scope rejection and lease injection tests | covered locally; pending live MCP drill |
+| closed engine profile | v1 | 0.2.0 | isolated HOME/XDG, disabled built-ins and exactly one MCP bridge | Codex verified live; OpenCode covered locally |
+| rootless container profile | v1 | 0.2.0 | pinned engines, non-root UID, read-only rootfs, dropped capabilities, no ports/socket and ephemeral lease tmpfs | verified live with Codex |
+| multi-engine selection | v1 | 0.2.0 | validated TOML selection, `create_engine()` factory, OpenCode JSON profile and fixed Codex-native bridge overrides | Codex verified live; OpenCode live drill pending |
 
 The contract's core-side grant/revoke, concurrent acquisition, token hashing, and provider approval enforcement are owned and tested by core; this repository does not duplicate them.
 
 Dynamic API-ready tools and future core tools fail closed. Adding one requires an adapter review, allowlist update and release; remote discovery alone never grants model access.
 
-The focused core compatibility suites (`test_remediation_workers.py`, `test_mcp_adapter.py`, `test_execution.py`) pass against an isolated ephemeral PostgreSQL cluster: 50 tests. The adapter fake-only suite passes 24 tests. Live bearer-token, assignment and infrastructure execution remain an operator-controlled deployment drill, not local conformance evidence.
+The focused core MCP compatibility suite (`test_mcp_clients.py`,
+`test_mcp_adapter.py`, `test_remediation_workers.py`) passes against isolated,
+ephemeral PostgreSQL databases: 52 tests. The external worker suite passes 41
+tests. The Codex live drill completed the canonical lease-fenced workflow and
+one task-bound `network.egress.status` invocation; OpenCode live conformance
+remains pending.

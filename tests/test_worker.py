@@ -6,7 +6,7 @@ import pytest
 
 from remediation_worker.config import Settings
 from remediation_worker.gateway import GatewayError, LeasedGatewayProxy, McpHttpGateway
-from remediation_worker.protocol import Job
+from remediation_worker.protocol import EngineResult, Job
 from remediation_worker.runner import Runner
 
 
@@ -44,7 +44,7 @@ class FakeEngine:
         self.runs += 1
         if self.wait:
             await self.release.wait()
-        return 0
+        return EngineResult(exit_code=0)
 
     async def terminate(self):
         self.terminated = True
@@ -70,6 +70,35 @@ async def test_incomplete_job_is_blocked_then_failed():
     assert blocked["worker_job_id"] == JOB.job_id
     assert blocked["worker_lease_token"] == JOB.lease_token
     assert finish["outcome"] == "failed"
+    assert finish["error_code"] == "engine_no_tool_calls"
+
+
+@pytest.mark.asyncio
+async def test_failed_tool_calls_preserve_only_normalized_error_code():
+    class ToolFailureEngine(FakeEngine):
+        async def run(self, job, lease_file=None):
+            return EngineResult(
+                exit_code=0,
+                attempted_tool_calls=2,
+                successful_tool_calls=0,
+                last_error_code="worker_lease_stale",
+            )
+
+    gateway = FakeGateway("investigating")
+    await Runner(gateway, ToolFailureEngine()).run_job(JOB)
+    finish = next(args for tool, args in gateway.calls if tool == "tasks_worker_finish")
+    assert finish["error_code"] == "worker_lease_stale"
+
+
+@pytest.mark.asyncio
+async def test_successful_tool_calls_without_completion_are_engine_incomplete():
+    class PartialEngine(FakeEngine):
+        async def run(self, job, lease_file=None):
+            return EngineResult(exit_code=0, attempted_tool_calls=3, successful_tool_calls=2)
+
+    gateway = FakeGateway("investigating")
+    await Runner(gateway, PartialEngine()).run_job(JOB)
+    finish = next(args for tool, args in gateway.calls if tool == "tasks_worker_finish")
     assert finish["error_code"] == "engine_incomplete"
 
 
@@ -243,10 +272,10 @@ async def test_gateway_rejects_core_error_envelope(monkeypatch):
         content = [Content()]
     class Session:
         async def call_tool(self, tool, arguments): return Result()
-    async def session(self):
-        yield Session()
+    async def with_session(self, fn):
+        return await fn(Session())
     gateway = McpHttpGateway("https://console.example/mcp", "token")
-    monkeypatch.setattr(McpHttpGateway, "_session", session)
+    monkeypatch.setattr(McpHttpGateway, "_with_session", with_session)
     with pytest.raises(GatewayError, match="worker_lease_expired"):
         await gateway.call("tasks_get", {})
 
@@ -259,10 +288,10 @@ async def test_gateway_preserves_bounded_list_results(monkeypatch):
         content = [Content()]
     class Session:
         async def call_tool(self, tool, arguments): return Result()
-    async def session(self):
-        yield Session()
+    async def with_session(self, fn):
+        return await fn(Session())
     gateway = McpHttpGateway("https://console.example/mcp", "token")
-    monkeypatch.setattr(McpHttpGateway, "_session", session)
+    monkeypatch.setattr(McpHttpGateway, "_with_session", with_session)
     assert await gateway.call("tasks_events_list", {}) == [{"event": "safe"}]
 
 

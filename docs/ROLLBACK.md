@@ -11,5 +11,8 @@
 5. After read-back confirms no active lease or assigned task, remove the
    container. Pin the last known-good image tag for a worker rollback; do not use
    `latest` for a live drill.
+6. To verify rollback, check the console task list and confirm no active leases.
+   The worker container logs must show no successful `tasks_worker_next` calls
+   after the capability was revoked.
 
 Do not start the legacy and external workers concurrently for the same task boundary.

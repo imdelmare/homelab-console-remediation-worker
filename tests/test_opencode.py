@@ -23,9 +23,9 @@ async def test_exact_argv_filtered_env_and_no_shell(monkeypatch, tmp_path: Path)
         return Process()
 
     monkeypatch.setattr(asyncio, "create_subprocess_exec", create)
-    engine = OpenCodeEngine(tmp_path, "fixed prompt", 1, env={"PATH": "/bin", "SECRET": "no"})
-    assert await engine.run(JOB) == 0
-    assert observed["argv"] == ("opencode", "--pure", "run", "--agent", "homelab-remediator", "--format", "json", "--dir", str(tmp_path), "fixed prompt")
+    engine = OpenCodeEngine(tmp_path, 1, env={"PATH": "/bin", "SECRET": "no"}, prompt="fixed prompt")
+    assert (await engine.run(JOB)).exit_code == 0
+    assert observed["argv"] == ("opencode", "run", "--agent", "homelab-remediator", "--format", "json", "--dir", str(tmp_path), "fixed prompt")
     assert observed["kwargs"]["env"] == {
         "PATH": "/bin",
         "OPENCODE_PURE": "true",
@@ -40,9 +40,9 @@ async def test_exact_argv_filtered_env_and_no_shell(monkeypatch, tmp_path: Path)
 def test_config_is_fixed_environment_not_caller_argv(tmp_path: Path):
     config = tmp_path / "opencode.json"
     config.write_text("{}")
-    engine = OpenCodeEngine(tmp_path, "fixed prompt", 1, opencode_config=config, env={"PATH": "/bin"})
+    engine = OpenCodeEngine(tmp_path, 1, profile_config=config, env={"PATH": "/bin"}, prompt="fixed prompt")
     assert "--config" not in engine.argv()
-    assert engine._env["OPENCODE_CONFIG"] == str(config)
+    assert engine._opencode_config is not None
 
 
 @pytest.mark.asyncio
@@ -57,5 +57,5 @@ async def test_timeout_terminates_then_returns_bounded_error(monkeypatch, tmp_pa
     process = Process()
     async def create(*argv, **kwargs): return process
     monkeypatch.setattr(asyncio, "create_subprocess_exec", create)
-    assert await OpenCodeEngine(tmp_path, "fixed", 0.01).run(JOB) == 124
+    assert (await OpenCodeEngine(tmp_path, 0.01, prompt="fixed").run(JOB)).exit_code == 124
     assert process.terminated

@@ -13,7 +13,8 @@ class Settings(BaseModel):
     token_file: Path
     project_dir: Path
     runtime_dir: Path = Path("/var/lib/homelab-console-remediation-worker/runtime")
-    opencode_config: Path = Path("/etc/homelab-console-remediation-worker/opencode.json")
+    profile_config: Path = Path("/etc/homelab-console-remediation-worker/profiles/opencode.json")
+    engine: str = "opencode"
     poll_max_seconds: int = Field(default=30, ge=1, le=300)
     engine_timeout_seconds: int = Field(default=900, ge=1, le=3600)
     shutdown_grace_seconds: int = Field(default=15, ge=1, le=120)
@@ -45,11 +46,18 @@ class Settings(BaseModel):
             raise ValueError("token_file is empty")
         return token
 
-    @field_validator("project_dir", "runtime_dir", "opencode_config")
+    @field_validator("project_dir", "runtime_dir", "profile_config")
     @classmethod
     def absolute_paths(cls, value: Path) -> Path:
         if not value.is_absolute():
             raise ValueError("paths must be absolute")
+        return value
+
+    @field_validator("engine")
+    @classmethod
+    def known_engine(cls, value: str) -> str:
+        if value not in {"opencode", "codex"}:
+            raise ValueError(f"unknown engine: {value!r}")
         return value
 
     def validate_paths(self) -> None:
@@ -60,9 +68,9 @@ class Settings(BaseModel):
         info = self.runtime_dir.lstat()
         if stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode) or info.st_mode & 0o077:
             raise ValueError("runtime_dir must be a non-symlink directory mode 0700")
-        info = self.opencode_config.lstat()
+        info = self.profile_config.lstat()
         if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode) or info.st_mode & 0o022:
-            raise ValueError("opencode_config must be a non-writable regular file")
+            raise ValueError("profile_config must be a non-writable regular file")
 
 
 def load_settings(path: Path) -> Settings:

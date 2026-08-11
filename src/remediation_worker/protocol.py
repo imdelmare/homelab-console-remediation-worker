@@ -31,10 +31,20 @@ class Job:
         return cls(**{key: data[key] for key in cls.__dataclass_fields__})
 
 
+@dataclass(frozen=True)
+class EngineResult:
+    """Bounded engine metadata. It must never contain model or tool payloads."""
+
+    exit_code: int
+    attempted_tool_calls: int = 0
+    successful_tool_calls: int = 0
+    last_error_code: str = ""
+
+
 class Gateway(Protocol):
     async def call(self, tool: str, arguments: dict[str, Any]) -> Any: ...
 
 
 class Engine(Protocol):
-    async def run(self, job: Job, lease_file: Path | None = None) -> int: ...
+    async def run(self, job: Job, lease_file: Path | None = None) -> EngineResult: ...
     async def terminate(self) -> None: ...

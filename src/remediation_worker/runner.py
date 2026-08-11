@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .gateway import GatewayError, LeasedGatewayProxy
-from .protocol import Engine, Gateway, Job
+from .protocol import Engine, EngineResult, Gateway, Job
 
 
 class Runner:
@@ -71,7 +71,7 @@ class Runner:
         expiry = [initial_expiry]
         renew_task = asyncio.create_task(self._renew_loop(job, engine_task, expiry))
         lease_lost = False
-        exit_code = 1
+        engine_result = EngineResult(exit_code=1)
         try:
             while not engine_task.done():
                 if renew_task.done():
@@ -84,12 +84,12 @@ class Runner:
                     break
                 await self._sleep(0.05)
             try:
-                exit_code = await engine_task
+                engine_result = await engine_task
             except asyncio.CancelledError:
                 raise
             except Exception:
                 # The engine output is deliberately unavailable; only normalize failure.
-                exit_code = 1
+                engine_result = EngineResult(exit_code=1)
 
             # Stop renewal before deciding whether task mutation is still safe.
             # This closes the race where renewal failed as the engine exited.
@@ -115,7 +115,7 @@ class Runner:
                 except (TimeoutError, GatewayError, KeyError, TypeError, ValueError):
                     pass
             elif not lease_lost:
-                await self._reconcile(proxy, job, exit_code, expiry[0])
+                await self._reconcile(proxy, job, engine_result, expiry[0])
         finally:
             if not renew_task.done():
                 renew_task.cancel()
@@ -155,7 +155,7 @@ class Runner:
                     backoff = min(5.0, backoff * 2)
         return False
 
-    async def _reconcile(self, proxy: LeasedGatewayProxy, job: Job, exit_code: int, lease_expiry: datetime) -> None:
+    async def _reconcile(self, proxy: LeasedGatewayProxy, job: Job, engine_result: EngineResult, lease_expiry: datetime) -> None:
         task = await self.gateway.call("tasks_get", {"task_id": job.task_id})
         if not isinstance(task, dict):
             raise GatewayError("mcp_invalid_response")
@@ -167,7 +167,7 @@ class Runner:
         elif status == "open" and not task.get("assigned_agent"):
             await self._finish(job, "released", version, lease_expiry=lease_expiry)
         elif status in {"blocked", "waiting_operator"}:
-            await self._finish(job, "failed", version, self._error_code(exit_code), lease_expiry)
+            await self._finish(job, "failed", version, self._error_code(engine_result), lease_expiry)
         elif status in {"claimed", "investigating"}:
             if status == "claimed":
                 if await self._release_if_stopping(proxy, job, lease_expiry):
@@ -183,7 +183,7 @@ class Runner:
                 raise GatewayError("mcp_invalid_response")
             if await self._release_if_stopping(proxy, job, lease_expiry):
                 return
-            await self._finish(job, "failed", blocked["version"], self._error_code(exit_code), lease_expiry)
+            await self._finish(job, "failed", blocked["version"], self._error_code(engine_result), lease_expiry)
 
     async def _release_if_stopping(self, proxy: LeasedGatewayProxy, job: Job, lease_expiry: datetime) -> bool:
         if not self.stop_requested:
@@ -215,8 +215,16 @@ class Runner:
             await self._finish(job, "released", released["version"], lease_expiry=lease_expiry, abort_on_stop=False)
 
     @staticmethod
-    def _error_code(exit_code: int) -> str:
-        return "engine_timeout" if exit_code == 124 else "engine_exit_nonzero" if exit_code else "engine_incomplete"
+    def _error_code(result: EngineResult) -> str:
+        if result.exit_code == 124:
+            return "engine_timeout"
+        if result.exit_code:
+            return "engine_exit_nonzero"
+        if not result.attempted_tool_calls:
+            return "engine_no_tool_calls"
+        if not result.successful_tool_calls:
+            return result.last_error_code or "engine_tools_failed"
+        return result.last_error_code or "engine_incomplete"
 
     @staticmethod
     def _expiry(value: str) -> datetime:

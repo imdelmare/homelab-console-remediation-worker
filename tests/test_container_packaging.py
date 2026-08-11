@@ -5,10 +5,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_container_runs_unprivileged_with_pinned_opencode():
+def test_container_runs_unprivileged():
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
     assert "ARG OPENCODE_VERSION=1.18.8" in dockerfile
     assert 'npm install --global "opencode-ai@${OPENCODE_VERSION}"' in dockerfile
+    assert "ARG CODEX_VERSION=0.147.0" in dockerfile
+    assert '"@openai/codex@${CODEX_VERSION}"' in dockerfile
     assert "USER 10001:10001" in dockerfile
     assert "ENTRYPOINT [\"/usr/bin/tini\", \"--\"]" in dockerfile
     assert "docker.sock" not in dockerfile
@@ -25,7 +27,8 @@ def test_compose_is_read_only_and_exposes_no_ports_or_docker_socket():
 
 
 def test_container_profile_uses_only_the_fenced_bridge():
-    profile = json.loads((ROOT / "opencode.container.json").read_text(encoding="utf-8"))
+    assert {path.name for path in (ROOT / "profiles").glob("*.json")} == {"opencode.json"}
+    profile = json.loads((ROOT / "profiles/opencode.json").read_text(encoding="utf-8"))
     assert profile["tools"] == {"*": False}
     assert list(profile["mcp"]) == ["homelab-remediation"]
     command = profile["mcp"]["homelab-remediation"]["command"]
@@ -37,3 +40,8 @@ def test_container_profile_uses_only_the_fenced_bridge():
         "--config",
         "/etc/homelab-console-remediation-worker/config.toml",
     ]
+
+
+def test_opencode_auth_mount_uses_vendor_native_path():
+    compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
+    assert "./secrets/opencode-auth.json:/var/lib/homelab-console-remediation-worker/data/opencode/auth.json:ro" in compose

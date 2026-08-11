@@ -28,6 +28,16 @@ _TASK_ALLOWED = _READ | {
 }
 _APPROVAL_ALLOWED = {"approvals_request", "approvals_get"}
 _CONTROL = {"task_id", "worker_job_id", "worker_lease_token"}
+BRIDGE_INSTRUCTIONS = (
+    "This is the only action interface for a lease-fenced Homelab Console worker. "
+    "Begin every job by calling tasks_get with an empty input, then tasks_context. "
+    "If the task is claimed, call tasks_set_status with status investigating before doing task work. "
+    "Follow the canonical task goal, budget, and stop conditions returned by those tools. "
+    "Use infrastructure tools only through this server; task and lease scope are injected automatically. "
+    "For infrastructure tools, send only the provider inputs shown in their schema; never add task_id, worker_job_id, or worker_lease_token. "
+    "Before ending, call tasks_update_summary with concise evidence and tasks_complete. "
+    "If completion is impossible, record the blocker with task tools; never claim success without canonical completion."
+)
 
 
 def _allowed_tool(name: str) -> bool:
@@ -120,7 +130,7 @@ class Bridge:
 
 async def serve(config_path: Path) -> None:
     from mcp.server.lowlevel import Server
-    from mcp.server.models import InitializationOptions, NotificationOptions
+    from mcp.server.lowlevel.server import NotificationOptions
     from mcp.server.stdio import stdio_server
     settings = load_settings(config_path)
     settings.validate_paths()
@@ -128,7 +138,11 @@ async def serve(config_path: Path) -> None:
     if not context:
         raise ValueError("missing lease context")
     bridge = Bridge(McpHttpGateway(settings.mcp_url, settings.read_token()), read_context(Path(context), settings.runtime_dir))
-    server = Server("homelab-remediation-bridge")
+    server = Server(
+        "homelab-remediation-bridge",
+        version="1",
+        instructions=BRIDGE_INSTRUCTIONS,
+    )
 
     @server.list_tools()
     async def list_tools():
@@ -139,4 +153,11 @@ async def serve(config_path: Path) -> None:
         return await bridge.call(name, arguments)
 
     async with stdio_server() as (read_stream, write_stream):
-        await server.run(read_stream, write_stream, InitializationOptions(server_name="homelab-remediation-bridge", server_version="1", capabilities=server.get_capabilities(notification_options=NotificationOptions(), experimental_capabilities={})))
+        await server.run(
+            read_stream,
+            write_stream,
+            server.create_initialization_options(
+                notification_options=NotificationOptions(),
+                experimental_capabilities={},
+            ),
+        )

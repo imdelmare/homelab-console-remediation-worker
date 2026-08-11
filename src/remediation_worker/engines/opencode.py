@@ -5,18 +5,18 @@ import os
 import signal
 from pathlib import Path
 
-from remediation_worker.protocol import Job
+from remediation_worker.protocol import EngineResult, Job
 
 
 class OpenCodeEngine:
     """Closed OpenCode launch profile. Output is bounded and intentionally discarded."""
 
-    def __init__(self, project_dir: Path, prompt: str, timeout_seconds: int, opencode_config: Path | None = None, env: dict[str, str] | None = None) -> None:
+    def __init__(self, project_dir: Path, timeout_seconds: int, profile_config: Path | None = None, prompt: str = "", env: dict[str, str] | None = None) -> None:
         info = project_dir.lstat()
         if not project_dir.is_absolute() or not project_dir.is_dir() or info.st_mode & 0o170000 == 0o120000:
             raise ValueError("project_dir must be an existing absolute non-symlink directory")
-        self._project_dir, self._prompt, self._timeout = project_dir, prompt, timeout_seconds
-        self._opencode_config = opencode_config
+        self._project_dir, self._prompt, self._timeout = project_dir, prompt or "Execute only the assigned remediation task through the fenced MCP bridge.", timeout_seconds
+        self._opencode_config = profile_config
         source = env if env is not None else os.environ
         self._env = {
             key: source[key]
@@ -26,6 +26,7 @@ class OpenCodeEngine:
                 "LANG",
                 "LC_ALL",
                 "TERM",
+                "PYTHONPATH",
                 "SSL_CERT_DIR",
                 "SSL_CERT_FILE",
                 "XDG_CACHE_HOME",
@@ -45,9 +46,12 @@ class OpenCodeEngine:
         self._process: asyncio.subprocess.Process | None = None
 
     def argv(self) -> list[str]:
-        return ["opencode", "--pure", "run", "--agent", "homelab-remediator", "--format", "json", "--dir", str(self._project_dir), self._prompt]
+        # --pure suppresses JSON output on stdout in v1.18.8. Isolation is
+        # already enforced through OPENCODE_PURE, OPENCODE_DISABLE_PROJECT_CONFIG
+        # and OPENCODE_DISABLE_EXTERNAL_SKILLS environment variables.
+        return ["opencode", "run", "--agent", "homelab-remediator", "--format", "json", "--dir", str(self._project_dir), self._prompt]
 
-    async def run(self, job: Job, lease_file: Path | None = None) -> int:
+    async def run(self, job: Job, lease_file: Path | None = None) -> EngineResult:
         del job
         env = dict(self._env)
         if lease_file is not None:
@@ -70,8 +74,8 @@ class OpenCodeEngine:
                 )
         except TimeoutError:
             await self.terminate()
-            return 124
-        return self._process.returncode or 0
+            return EngineResult(exit_code=124)
+        return EngineResult(exit_code=self._process.returncode or 0)
 
     @staticmethod
     async def _drain(stream: asyncio.StreamReader) -> None:

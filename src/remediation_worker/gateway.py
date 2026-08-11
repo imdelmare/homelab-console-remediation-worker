@@ -21,23 +21,31 @@ class McpHttpGateway:
     def _http_client(self) -> httpx.AsyncClient:
         return httpx.AsyncClient(headers={"Authorization": f"Bearer {self._token}"}, timeout=httpx.Timeout(self._timeout), follow_redirects=False, verify=True)
 
-    async def _session(self):
+    async def _with_session(self, fn):
+        """Run *fn* inside an MCP streamable-HTTP session.
+
+        The body runs synchronously in the same cancellation scope so that
+        ``anyio`` task-group cleanup never crosses a generator boundary.
+        """
         from mcp import ClientSession
         from mcp.client.streamable_http import streamable_http_client
+
         client = self._http_client()
         try:
-            async with streamable_http_client(self.url, http_client=client, terminate_on_close=True) as streams:
+            async with streamable_http_client(self.url, http_client=client, terminate_on_close=False) as streams:
                 read_stream, write_stream, _ = streams
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
-                    yield session
+                    return await fn(session)
         finally:
             await client.aclose()
 
     async def call(self, tool: str, arguments: dict[str, Any]) -> Any:
+        async def _call(session):
+            return await session.call_tool(tool, arguments)
+
         try:
-            async for session in self._session():
-                result = await session.call_tool(tool, arguments)
+            result = await self._with_session(_call)
         except Exception as exc:
             raise GatewayError("mcp_unavailable") from exc
         if result.isError or len(result.content) != 1 or not hasattr(result.content[0], "text"):
@@ -59,17 +67,18 @@ class McpHttpGateway:
         return value
 
     async def list_tools(self) -> list[Any]:
+        async def _list(session):
+            tools = list((await session.list_tools()).tools)
+            if len(tools) > 512:
+                raise GatewayError("mcp_invalid_response")
+            return tools
+
         try:
-            async for session in self._session():
-                tools = list((await session.list_tools()).tools)
-                if len(tools) > 512:
-                    raise GatewayError("mcp_invalid_response")
-                return tools
+            return await self._with_session(_list)
         except GatewayError:
             raise
         except Exception as exc:
             raise GatewayError("mcp_unavailable") from exc
-        raise GatewayError("mcp_invalid_response")
 
 
 class LeasedGatewayProxy:
