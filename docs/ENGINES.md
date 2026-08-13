@@ -18,18 +18,20 @@ Set the value in `config.toml` before `docker compose up -d`:
 engine = "codex"
 ```
 
-## Factory discovery
+## Factory selection
 
-`src/remediation_worker/engines/__init__.py` holds the registry:
+`src/remediation_worker/engines/__init__.py` resolves the closed set explicitly:
 
 ```python
-_ENGINES = {
-    "opencode": OpenCodeEngine,
-    "codex": CodexEngine,
-}
+if engine == "opencode":
+    return OpenCodeEngine(project_dir, timeout_seconds, profile_config)
+if engine == "codex":
+    return CodexEngine(project_dir, timeout_seconds, profile_config)
 ```
 
-`create_engine(name, project_dir, timeout_seconds, profile_config, **kwargs)` resolves the name, instantiates the class and returns an `Engine` instance. Unknown names raise `ValueError`. Keyword arguments are forwarded directly — the factory never inspects provider‑specific options.
+`create_engine(name, project_dir, timeout_seconds, profile_config)` returns an
+`Engine` instance. Unknown names raise `ValueError`. Callers cannot override the
+fixed prompt, argument vector or child environment.
 
 ## Adding an engine
 
@@ -40,7 +42,7 @@ _ENGINES = {
        async def terminate(self) -> None: ...
    ```
 2. Place the class in `src/remediation_worker/engines/<name>.py`.
-3. Register it in `_ENGINES` inside `__init__.py`.
+3. Add an explicit closed branch to `create_engine()` inside `__init__.py`.
 4. Add a vendor-native closed profile. It must disable built-in action tools and
    define exactly one MCP server (`homelab-remediation`) with the fixed bridge
    command. Never pass a profile from one engine to another.

@@ -11,15 +11,16 @@ from remediation_worker.protocol import EngineResult, Job
 class OpenCodeEngine:
     """Closed OpenCode launch profile. Output is bounded and intentionally discarded."""
 
-    def __init__(self, project_dir: Path, timeout_seconds: int, profile_config: Path | None = None, prompt: str = "", env: dict[str, str] | None = None) -> None:
+    def __init__(self, project_dir: Path, timeout_seconds: int, profile_config: Path | None = None) -> None:
         info = project_dir.lstat()
         if not project_dir.is_absolute() or not project_dir.is_dir() or info.st_mode & 0o170000 == 0o120000:
             raise ValueError("project_dir must be an existing absolute non-symlink directory")
-        self._project_dir, self._prompt, self._timeout = project_dir, prompt or "Execute only the assigned remediation task through the fenced MCP bridge.", timeout_seconds
+        self._project_dir = project_dir
+        self._prompt = "Execute only the assigned remediation task through the fenced MCP bridge."
+        self._timeout = timeout_seconds
         self._opencode_config = profile_config
-        source = env if env is not None else os.environ
         self._env = {
-            key: source[key]
+            key: os.environ[key]
             for key in (
                 "HOME",
                 "PATH",
@@ -34,7 +35,7 @@ class OpenCodeEngine:
                 "XDG_DATA_HOME",
                 "XDG_STATE_HOME",
             )
-            if key in source
+            if key in os.environ
         }
         self._env.update({
             "OPENCODE_PURE": "true",
