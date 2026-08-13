@@ -24,7 +24,9 @@ def test_release_script_is_fixed_to_worker_and_uses_immutable_health_gated_relea
     assert "DEPLOY_DIR=/opt/remediation-worker" in script
     assert "@sha256:[0-9a-f]{64}$" in script
     assert "latest is not a release artifact" in script
-    assert 'run --rm --no-deps worker config-check' in script
+    assert 'run --rm --no-deps --entrypoint python worker' in script
+    assert '-m remediation_worker config-check' in script
+    assert script.count('|| return 1') >= 4
     assert 'up -d --no-deps --force-recreate worker' in script
     assert "health_gate" in script
     assert "restore_or_stop" in script

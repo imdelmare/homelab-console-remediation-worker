@@ -78,10 +78,12 @@ health_gate() {
 deploy() {
   local image=$1 profile=$2
   validate_image "$image"
-  with_image "$image" "$profile" pull worker
-  with_image "$image" "$profile" run --rm --no-deps worker config-check --config /etc/homelab-console-remediation-worker/config.toml
-  with_image "$image" "$profile" up -d --no-deps --force-recreate worker
-  health_gate "$image" "$profile"
+  with_image "$image" "$profile" pull worker || return 1
+  with_image "$image" "$profile" run --rm --no-deps --entrypoint python worker \
+    -m remediation_worker config-check \
+    --config /etc/homelab-console-remediation-worker/config.toml || return 1
+  with_image "$image" "$profile" up -d --no-deps --force-recreate worker || return 1
+  health_gate "$image" "$profile" || return 1
 }
 
 restore_or_stop() {
