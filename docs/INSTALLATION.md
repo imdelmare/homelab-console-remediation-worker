@@ -12,9 +12,10 @@ drops all capabilities and does not mount a Docker socket.
 2. Create `secrets/mcp-token` containing the dedicated MCP bearer token. For
    OpenCode, also create `secrets/opencode-auth.json` from the provider-owned
    authentication file. The base Compose file is the OpenCode profile. For
-   Codex, use the checked-in `compose.codex.yaml` override, which mounts a
-   separate operator-owned `secrets/codex-home` as `CODEX_HOME`. Never commit
-   authentication material or reuse an engine identity/token.
+   Codex, use the checked-in `compose.codex.yaml` override. It mounts the
+   operator-owned writable runtime home from `codex-home` and the separate OAuth
+   directory from `codex-config` as `CODEX_HOME`. Never commit authentication
+   material or reuse an engine identity/token.
 3. On a Linux host, set mounted credential files to owner `10001:10001` and
    mode `0600`. The worker deliberately rejects a token file with broader
    permissions or a different owner.
@@ -37,10 +38,10 @@ drops all capabilities and does not mount a Docker socket.
     ./scripts/release-worker upgrade ghcr.io/<github.repository>@sha256:<digest> --codex
    ```
 
-   The override includes Codex and mounts the operator-owned OAuth directory at
-   the fixed `CODEX_HOME` path while replacing the OpenCode credential mount, so
-   the container receives credentials for exactly one engine. Do not copy or
-   commit its `auth.json`.
+   The override replaces the OpenCode credential mount, sets the fixed Codex
+   home paths and gives the container credentials for exactly one engine. Set
+   both directories to UID/GID `10001:10001`; keep `codex-config` mode `0700`.
+   Do not copy or commit its `auth.json`.
 6. Before granting `task-worker.v1`, inspect the selected engine's resolved
    configuration in an isolated one-off container. Confirm that built-ins are
    disabled and the only MCP server is `homelab-remediation`.

@@ -19,6 +19,10 @@ The fixed deployment directory is `/opt/remediation-worker`. Copy the checked-in
 `secrets/` in place across releases; the release procedure neither writes nor
 removes them.
 
+The Codex profile additionally retains operator-owned `codex-home/` and
+`codex-config/` directories. Upgrade and rollback recreate only the container;
+they do not modify either directory.
+
 CI builds and publishes release artifacts; the deployment host never builds an
 image. Obtain the selected artifact's registry digest from the CI workflow.
 Only a fully qualified immutable image ending in `@sha256:<64 lowercase hex>`

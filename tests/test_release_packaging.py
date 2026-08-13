@@ -41,6 +41,14 @@ def test_release_documentation_covers_base_codex_and_stateful_rollback():
     assert "health" in release
 
 
+def test_codex_profile_preserves_separate_runtime_and_oauth_homes():
+    override = (ROOT / "compose.codex.yaml").read_text(encoding="utf-8")
+    assert "./codex-home:/home/worker:rw" in override
+    assert "./codex-config:/home/worker/.codex:rw" in override
+    assert "CODEX_HOME: /home/worker/.codex" in override
+    assert "opencode-auth.json" not in override
+
+
 def test_ci_builds_and_attests_fixed_ghcr_base_and_codex_artifacts():
     workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
     assert "IMAGE_NAME: ghcr.io/${{ github.repository }}" in workflow
@@ -60,6 +68,7 @@ def test_ci_builds_and_attests_fixed_ghcr_base_and_codex_artifacts():
 def test_codex_compose_override_mounts_only_the_codex_identity():
     codex_compose = (ROOT / "compose.codex.yaml").read_text(encoding="utf-8")
     assert "volumes: !override" in codex_compose
-    assert "./secrets/codex-home:" in codex_compose
-    assert "CODEX_HOME:" in codex_compose
+    assert "./codex-home:/home/worker:rw" in codex_compose
+    assert "./codex-config:/home/worker/.codex:rw" in codex_compose
+    assert "CODEX_HOME: /home/worker/.codex" in codex_compose
     assert "opencode-auth.json" not in codex_compose
