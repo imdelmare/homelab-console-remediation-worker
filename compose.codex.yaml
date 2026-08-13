@@ -1,0 +1,8 @@
+services:
+  worker:
+    volumes: !override
+      - ./config.toml:/etc/homelab-console-remediation-worker/config.toml:ro
+      - ./secrets/mcp-token:/run/secrets/mcp-token:ro
+      - ./secrets/codex-home:/var/lib/homelab-console-remediation-worker/codex:ro
+    environment:
+      CODEX_HOME: /var/lib/homelab-console-remediation-worker/codex

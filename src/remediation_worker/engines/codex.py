@@ -139,6 +139,8 @@ class CodexEngine:
         "tasks_update_summary",
         "tasks_add_note",
         "tasks_complete",
+        "lab_summary",
+        "lab_alerts_recent",
         "network_dns_resolve",
         "network_egress_status",
     )

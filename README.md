@@ -4,7 +4,7 @@ External, lease-fenced worker for `REMEDIATION_WORKER_V1`. It polls a dedicated 
 
 The engine agent receives MCP access only through the mandatory stdio bridge. The fixed profile in `profiles/` starts `python -m remediation_worker bridge --config /etc/homelab-console-remediation-worker/config.toml`; it accepts no task, model, URL or command parameters. The bridge reads the runner-owned 0600 lease-context file, filters worker-control tools and injects the active task and lease through `LeasedGatewayProxy`.
 
-Use `python -m remediation_worker config-check --config config.toml` before installation. See `docs/INSTALLATION.md`, `docs/ENGINES.md`, `docs/RUNBOOK.md`, and `docs/ROLLBACK.md`.
+Use `python -m remediation_worker config-check --config config.toml` before installation. Container releases use immutable artifacts through the fixed `/opt/remediation-worker/scripts/release-worker`; see `docs/RELEASE.md`, `docs/INSTALLATION.md`, `docs/ENGINES.md`, `docs/RUNBOOK.md`, and `docs/ROLLBACK.md`.
 
 ## Engines
 

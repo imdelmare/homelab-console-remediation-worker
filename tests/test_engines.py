@@ -64,6 +64,8 @@ def test_codex_uses_fixed_native_bridge_profile(tmp_path: Path):
     enabled_tools = next(value for value in argv if value.startswith("mcp_servers.homelab-remediation.enabled_tools="))
     for name in CodexEngine.ENABLED_TOOLS:
         assert f'"{name}"' in enabled_tools
+    assert '"lab_summary"' in enabled_tools
+    assert '"lab_alerts_recent"' in enabled_tools
     assert "tasks_worker_next" not in enabled_tools
     assert argv[-1] == "fixed prompt"
     assert engine._env == {"PATH": "/bin", "CODEX_HOME": "/codex"}

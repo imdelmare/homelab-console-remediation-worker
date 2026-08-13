@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# This script intentionally manages only the fixed Compose worker service.
+DEPLOY_DIR=/opt/remediation-worker
+STATE_DIR="$DEPLOY_DIR/.release-state"
+CURRENT_STATE="$STATE_DIR/current"
+PREVIOUS_STATE="$STATE_DIR/previous"
+HEALTH_ATTEMPTS=20
+HEALTH_INTERVAL_SECONDS=3
+
+usage() {
+  printf '%s\n' "usage: $0 upgrade IMAGE@sha256:DIGEST [--codex] | rollback"
+  exit 64
+}
+
+die() {
+  printf '%s\n' "release-worker: $*" >&2
+  exit 1
+}
+
+validate_image() {
+  local image=$1
+  [[ $image != *:latest* ]] || die "latest is not a release artifact"
+  [[ $image =~ @sha256:[0-9a-f]{64}$ ]] || die "image must end in an immutable sha256 digest"
+}
+
+read_state() {
+  local state_file=$1
+  [[ -f $state_file ]] || return 1
+  local image profile extra
+  image=$(awk -F= '$1 == "image" { print substr($0, 7) }' "$state_file")
+  profile=$(awk -F= '$1 == "profile" { print substr($0, 9) }' "$state_file")
+  extra=$(awk -F= '$1 != "image" && $1 != "profile" { print }' "$state_file")
+  [[ -z $extra && -n $image && ( $profile == base || $profile == codex ) ]] || die "invalid release state"
+  validate_image "$image"
+  STATE_IMAGE=$image
+  STATE_PROFILE=$profile
+}
+
+write_state() {
+  local state_file=$1 image=$2 profile=$3 temp
+  install -d -m 0700 "$STATE_DIR"
+  temp=$(mktemp "$STATE_DIR/.state.XXXXXX")
+  chmod 0600 "$temp"
+  printf 'image=%s\nprofile=%s\n' "$image" "$profile" > "$temp"
+  mv -f "$temp" "$state_file"
+}
+
+compose() {
+  local profile=$1
+  shift
+  local -a files=(-f "$DEPLOY_DIR/compose.yaml")
+  [[ $profile == codex ]] && files+=(-f "$DEPLOY_DIR/compose.codex.yaml")
+  docker compose --project-directory "$DEPLOY_DIR" "${files[@]}" "$@"
+}
+
+with_image() {
+  local image=$1 profile=$2
+  shift 2
+  WORKER_IMAGE=$image compose "$profile" "$@"
+}
+
+health_gate() {
+  local image=$1 profile=$2 container status attempt
+  for ((attempt = 1; attempt <= HEALTH_ATTEMPTS; attempt++)); do
+    container=$(with_image "$image" "$profile" ps -q worker)
+    if [[ -n $container ]]; then
+      status=$(docker inspect --format '{{.State.Health.Status}}' "$container" 2>/dev/null || true)
+      [[ $status == healthy ]] && return 0
+      [[ $status == unhealthy ]] && return 1
+    fi
+    sleep "$HEALTH_INTERVAL_SECONDS"
+  done
+  return 1
+}
+
+deploy() {
+  local image=$1 profile=$2
+  validate_image "$image"
+  with_image "$image" "$profile" pull worker
+  with_image "$image" "$profile" run --rm --no-deps worker config-check --config /etc/homelab-console-remediation-worker/config.toml
+  with_image "$image" "$profile" up -d --no-deps --force-recreate worker
+  health_gate "$image" "$profile"
+}
+
+restore_or_stop() {
+  local candidate_image=$1 candidate_profile=$2
+  if read_state "$CURRENT_STATE"; then
+    printf '%s\n' "release-worker: restoring the prior healthy release" >&2
+    deploy "$STATE_IMAGE" "$STATE_PROFILE"
+  else
+    printf '%s\n' "release-worker: no prior release state; stopping failed worker" >&2
+    with_image "$candidate_image" "$candidate_profile" stop worker || true
+  fi
+}
+
+[[ -d $DEPLOY_DIR ]] || die "deployment directory $DEPLOY_DIR does not exist"
+[[ -f $DEPLOY_DIR/compose.yaml ]] || die "missing fixed Compose manifest"
+
+case ${1:-} in
+  upgrade)
+    [[ $# == 2 || $# == 3 ]] || usage
+    image=$2
+    profile=base
+    if [[ ${3:-} == --codex ]]; then
+      profile=codex
+    elif [[ $# == 3 ]]; then
+      usage
+    fi
+    [[ $profile == base || -f $DEPLOY_DIR/compose.codex.yaml ]] || die "missing Codex Compose override"
+    if deploy "$image" "$profile"; then
+      if [[ -f $CURRENT_STATE ]]; then
+        install -d -m 0700 "$STATE_DIR"
+        cp "$CURRENT_STATE" "$PREVIOUS_STATE"
+        chmod 0600 "$PREVIOUS_STATE"
+      fi
+      write_state "$CURRENT_STATE" "$image" "$profile"
+    else
+      restore_or_stop "$image" "$profile"
+      die "candidate failed health gate"
+    fi
+    ;;
+  rollback)
+    [[ $# == 1 ]] || usage
+    read_state "$PREVIOUS_STATE" || die "no previous release state"
+    rollback_image=$STATE_IMAGE
+    rollback_profile=$STATE_PROFILE
+    read_state "$CURRENT_STATE" || die "no current release state"
+    current_image=$STATE_IMAGE
+    current_profile=$STATE_PROFILE
+    if deploy "$rollback_image" "$rollback_profile"; then
+      write_state "$CURRENT_STATE" "$rollback_image" "$rollback_profile"
+      write_state "$PREVIOUS_STATE" "$current_image" "$current_profile"
+    else
+      restore_or_stop "$rollback_image" "$rollback_profile"
+      die "rollback release failed health gate"
+    fi
+    ;;
+  *) usage ;;
+esac

@@ -1,5 +1,14 @@
 # Rollback
 
+For a container release rollback, run
+`./scripts/release-worker rollback` from `/opt/remediation-worker`. It restores
+only the `worker` service from its recorded immutable previous artifact, runs
+config validation, and requires health. If that rollback fails, it restores the
+pre-rollback current release. It never deletes token, authentication, config,
+or data files. See [`RELEASE.md`](RELEASE.md).
+
+To retire the worker:
+
 1. Stop the worker with `docker compose stop worker` (or disable the native
    system service). The bounded shutdown path first attempts a canonical task
    release. Preserve the stopped container until task and lease read-back is
