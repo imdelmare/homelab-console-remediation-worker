@@ -1,7 +1,16 @@
 from pathlib import Path
 
+import yaml
+
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_release_workflow_is_valid_yaml():
+    workflow = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8"))
+    assert set(workflow["jobs"]) == {"test", "base", "codex"}
+    assert workflow["jobs"]["base"]["needs"] == "test"
+    assert workflow["jobs"]["codex"]["needs"] == "test"
 
 
 def test_compose_requires_a_release_artifact_and_never_builds_locally():

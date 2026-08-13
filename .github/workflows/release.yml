@@ -13,9 +13,23 @@ permissions:
   contents: read
   packages: write
   id-token: write
+  attestations: write
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install '.[dev]'
+      - run: python -m pytest
+      - run: bash -n scripts/release-worker
+
   base:
+    needs: test
     runs-on: ubuntu-latest
     outputs:
       digest: ${{ steps.build.outputs.digest }}
@@ -52,9 +66,11 @@ jobs:
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
       - name: Publish base digest
-        run: printf 'Base image: %s@%s\n' "$IMAGE_NAME" "${{ steps.build.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          printf 'Base image: %s@%s\n' "$IMAGE_NAME" "${{ steps.build.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
 
   codex:
+    needs: test
     runs-on: ubuntu-latest
     outputs:
       digest: ${{ steps.build.outputs.digest }}
@@ -92,4 +108,5 @@ jobs:
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
       - name: Publish Codex digest
-        run: printf 'Codex image: %s@%s\n' "$IMAGE_NAME" "${{ steps.build.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          printf 'Codex image: %s@%s\n' "$IMAGE_NAME" "${{ steps.build.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
