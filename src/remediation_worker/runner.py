@@ -13,6 +13,38 @@ from .gateway import GatewayError, LeasedGatewayProxy
 from .protocol import Engine, EngineResult, Gateway, Job
 
 
+_NORMALIZED_ENGINE_ERRORS = frozenset(
+    {
+        "engine_exit_nonzero",
+        "engine_incomplete",
+        "engine_no_tool_calls",
+        "engine_timeout",
+        "engine_tools_failed",
+        "idempotency_conflict",
+        "invalid_worker_lease",
+        "mcp_invalid_response",
+        "mcp_tool_call_rejected",
+        "mcp_unavailable",
+        "worker_client_revoked",
+        "worker_job_not_ready",
+        "worker_lease_conflict",
+        "worker_lease_expired",
+        "worker_lease_stale",
+        "worker_protocol_unavailable",
+        "worker_task_scope_denied",
+    }
+)
+_RETRYABLE_ENGINE_ERRORS = frozenset(
+    {
+        "engine_exit_nonzero",
+        "engine_timeout",
+        "mcp_invalid_response",
+        "mcp_unavailable",
+        "worker_protocol_unavailable",
+    }
+)
+
+
 class Runner:
     def __init__(
         self,
@@ -169,6 +201,10 @@ class Runner:
         elif status in {"blocked", "waiting_operator"}:
             await self._finish(job, "failed", version, self._error_code(engine_result), lease_expiry)
         elif status in {"claimed", "investigating"}:
+            error_code = self._error_code(engine_result)
+            if error_code in _RETRYABLE_ENGINE_ERRORS:
+                await self._finish(job, "retry", version, error_code, lease_expiry)
+                return
             if status == "claimed":
                 if await self._release_if_stopping(proxy, job, lease_expiry):
                     return
@@ -183,7 +219,7 @@ class Runner:
                 raise GatewayError("mcp_invalid_response")
             if await self._release_if_stopping(proxy, job, lease_expiry):
                 return
-            await self._finish(job, "failed", blocked["version"], self._error_code(engine_result), lease_expiry)
+            await self._finish(job, "failed", blocked["version"], error_code, lease_expiry)
 
     async def _release_if_stopping(self, proxy: LeasedGatewayProxy, job: Job, lease_expiry: datetime) -> bool:
         if not self.stop_requested:
@@ -223,8 +259,10 @@ class Runner:
         if not result.attempted_tool_calls:
             return "engine_no_tool_calls"
         if not result.successful_tool_calls:
-            return result.last_error_code or "engine_tools_failed"
-        return result.last_error_code or "engine_incomplete"
+            candidate = result.last_error_code or "engine_tools_failed"
+        else:
+            candidate = result.last_error_code or "engine_incomplete"
+        return candidate if candidate in _NORMALIZED_ENGINE_ERRORS else "engine_tools_failed"
 
     @staticmethod
     def _expiry(value: str) -> datetime:

@@ -155,7 +155,42 @@ async def test_engine_exception_blocks_and_finishes_without_raw_output():
     gateway = FakeGateway("investigating")
     await Runner(gateway, BrokenEngine()).run_job(JOB)
     finish = next(args for tool, args in gateway.calls if tool == "tasks_worker_finish")
+    assert finish["outcome"] == "retry"
     assert finish["error_code"] == "engine_exit_nonzero"
+    assert not any(tool == "tasks_set_status" for tool, _ in gateway.calls)
+
+
+@pytest.mark.asyncio
+async def test_timeout_retries_without_mutating_active_task():
+    class TimedOutEngine(FakeEngine):
+        async def run(self, job, lease_file=None):
+            return EngineResult(exit_code=124)
+
+    gateway = FakeGateway("investigating")
+    await Runner(gateway, TimedOutEngine()).run_job(JOB)
+    finish = next(args for tool, args in gateway.calls if tool == "tasks_worker_finish")
+    assert finish["outcome"] == "retry"
+    assert finish["error_code"] == "engine_timeout"
+    assert not any(tool == "tasks_set_status" for tool, _ in gateway.calls)
+
+
+@pytest.mark.asyncio
+async def test_arbitrary_engine_error_is_normalized_at_runner_boundary():
+    class UnsafeErrorEngine(FakeEngine):
+        async def run(self, job, lease_file=None):
+            return EngineResult(
+                exit_code=0,
+                attempted_tool_calls=1,
+                successful_tool_calls=0,
+                last_error_code="provider secret output",
+            )
+
+    gateway = FakeGateway("investigating")
+    await Runner(gateway, UnsafeErrorEngine()).run_job(JOB)
+    finish = next(args for tool, args in gateway.calls if tool == "tasks_worker_finish")
+    assert finish["outcome"] == "failed"
+    assert finish["error_code"] == "engine_tools_failed"
+    assert "provider secret output" not in str(gateway.calls)
 
 
 @pytest.mark.asyncio
